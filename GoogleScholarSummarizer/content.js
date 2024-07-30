@@ -35,17 +35,52 @@ async function getPageContent(url) {
   }
   
   function displaySummaries(summaries, overallSummary) {
+    // Style for the overall summary
+    const overallSummaryStyle = `
+      border: 2px solid #4285F4;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 15px 0;
+      background-color: #F8F9FA;
+      font-family: Arial, sans-serif;
+    `;
+  
+    // Style for individual summaries
+    const individualSummaryStyle = `
+      border: 1px dashed #4285F4;
+      border-radius: 4px;
+      padding: 10px;
+      margin: 10px 0;
+      background-color: #E8F0FE;
+      font-family: Arial, sans-serif;
+    `;
+  
+    // Create and insert overall summary
     const summaryDiv = document.createElement('div');
     summaryDiv.id = 'gs-summarizer-overall';
-    summaryDiv.innerHTML = `<h2>Overall Summary</h2><p>${overallSummary}</p>`;
-    document.body.insertBefore(summaryDiv, document.body.firstChild);
+    summaryDiv.style.cssText = overallSummaryStyle;
+    
+    // Apply bold styling to markdown bold text
+    const formattedOverallSummary = overallSummary.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    
+    summaryDiv.innerHTML = `<h2 style="color: #4285F4; margin-top: 0;">Overall Summary</h2>${formattedOverallSummary}`;
+    
+    // Insert after the search bar
+    const searchBar = document.querySelector('#gs_hdr');
+    searchBar.parentNode.insertBefore(summaryDiv, searchBar.nextSibling);
   
+    // Add individual summaries to each article
     const articles = document.querySelectorAll('.gs_r');
     articles.forEach((article, index) => {
       if (summaries[index]) {
-        const summaryP = document.createElement('p');
+        const summaryP = document.createElement('div');
         summaryP.className = 'gs-summarizer-individual';
-        summaryP.textContent = summaries[index];
+        summaryP.style.cssText = individualSummaryStyle;
+        
+        // Apply bold styling to markdown bold text
+        const formattedSummary = summaries[index].replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        
+        summaryP.innerHTML = formattedSummary;
         article.appendChild(summaryP);
       }
     });

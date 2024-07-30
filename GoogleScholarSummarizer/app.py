@@ -28,7 +28,7 @@ def summarize():
     search_query = data['searchQuery']
     # contents dictionary has a list of URLs and the "contents" value is empty
 
-    summaries = []
+    summaries = [""] # JS took index 1, so we need to add an empty string to index 0
     for item in contents:
         summary = generate_summary(item['link'])
         summaries.append(summary)
