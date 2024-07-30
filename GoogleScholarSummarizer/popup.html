@@ -8,15 +8,44 @@
       font-family: Arial, sans-serif;
     }
     #message {
-      display: none;
       color: #4285F4;
       font-weight: bold;
+      margin-bottom: 10px;
+    }
+    #progressContainer {
+      width: 100%;
+      background-color: #f0f0f0;
+      border-radius: 5px;
+      margin-top: 10px;
+      display: none;
+    }
+    #progressBar {
+      width: 0%;
+      height: 20px;
+      background-color: #4285F4;
+      border-radius: 5px;
+      text-align: center;
+      line-height: 20px;
+      color: white;
+    }
+    #startButton {
+      width: 100%;
+      padding: 10px;
+      background-color: #4285F4;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <h2>Red Panda is reading for you!</h2>
+  <h2>Scholarly Red Panda</h2>
+  <button id="startButton">Start Summarization</button>
   <p id="message"></p>
+  <div id="progressContainer">
+    <div id="progressBar"></div>
+  </div>
   <script src="popup.js"></script>
 </body>
 </html>

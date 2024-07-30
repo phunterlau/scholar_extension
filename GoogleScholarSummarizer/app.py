@@ -1,32 +1,24 @@
-from flask import Flask, request, jsonify
-# OpenAI or Groq or local models from Chrome or iOS in future
+from flask import Flask, request, jsonify, Response
 from openai import OpenAI
 from groq import Groq
 import os
 import requests
-
 from flask_cors import CORS
+import json
 
 app = Flask(__name__)
 CORS(app, resources={r"/summarize": {"origins": "chrome-extension://loojlaeieeklhbpngckhcjhcdcobieln"}})
 
-# cheap and fast gpt-4o-mini
 config_openai_dict = {'endpoint': "openai", 'model': "gpt-4o-mini", 'api_key': os.environ.get("OPENAI_API_KEY")}
-# Llama 3.1 8b is very fast, but the prompt needs some tuning.
 config_groq_dict = {'endpoint': "groq", 'model': "llama-3.1-8b-instant", 'api_key': os.environ.get("GROQ_API_KEY")}
 
-# switch between OpenAI/GPT and Groq/Llama 3.1
-#config_dict = config_groq_dict
-config_dict = config_openai_dict
+# config_dict = config_openai_dict
+config_dict = config_groq_dict
 
 if config_dict['endpoint'] == "openai":
-    client = OpenAI(
-        api_key=config_dict['api_key']
-    )
+    client = OpenAI(api_key=config_dict['api_key'])
 elif config_dict['endpoint'] == "groq":
-    client = Groq(
-        api_key=config_dict['api_key']
-    )
+    client = Groq(api_key=config_dict['api_key'])
 
 @app.after_request
 def after_request(response):
@@ -40,30 +32,29 @@ def summarize():
     data = request.json
     contents = data['contents']
     search_query = data['searchQuery']
-    # contents dictionary has a list of URLs and the "contents" value is empty
 
-    summaries = [""] # JS took index 1, so we need to add an empty string to index 0
-    for item in contents:
-        summary = generate_summary(item['link'])
-        summaries.append(summary)
+    def generate():
+        summaries = [""]  # JS took index 1, so we need to add an empty string to index 0
+        total = len(contents)
+        
+        for i, item in enumerate(contents):
+            summary = generate_summary(item['link'])
+            summaries.append(summary)
+            progress = (i + 1) / total
+            # why "i+2"? because JS took index 1, so we need to add 1 to the index
+            yield f"data: {json.dumps({'progress': progress, 'summary': summary, 'index': i+2})}\n\n"
 
-    overall_summary = generate_overall_summary(summaries, search_query)
+        overall_summary = generate_overall_summary(summaries, search_query)
+        yield f"data: {json.dumps({'progress': 1, 'overall_summary': overall_summary})}\n\n"
 
-    return jsonify({
-        'summaries': summaries,
-        'overallSummary': overall_summary
-    })
+    return Response(generate(), content_type='text/event-stream')
 
-# for each url, add a "https://r.jina.ai/" prefix and use requests to get its content
-# for example https://r.jina.ai/https://arxiv.org/abs/2406.02450
 def get_raw_content(input_url):
     url = f"https://r.jina.ai/{input_url}"
     response = requests.get(url)
     return response.text
 
-# for each url link, get the raw content and summarize each content
 def generate_summary(input_url):
-
     content = get_raw_content(input_url)
     response = client.chat.completions.create(
         model=config_dict['model'],

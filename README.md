@@ -3,6 +3,10 @@ A Chrome/Edge extension to summarize Google Scholar page. It has an overall summ
 
 High voltage warning: it is mostly for my personal use, never promised stability or production quality, nor easy setups. Contributions on a better frontend is always welcomed and appreciated!
 
+Change logs:
+
+* July 30: add Llama 3.1 support via Groq; add "start summary" and a progress bar, and the summary shows up one by one when done.
+
 ## How to install
 
 1. Download the repo and unpack it.

@@ -2,17 +2,12 @@
   "manifest_version": 3,
   "name": "Google Scholar Summarizer",
   "version": "1.0",
-  "description": "Summarizes Google Scholar search results using GPT-4",
-  "permissions": [
-    "activeTab",
-    "scripting",
-    "https://scholar.google.com/*",
-    "http://127.0.0.1:5000/*"
-  ],
-  "host_permissions": [
-    "https://*/*",
-    "http://*/*"
-  ],
+  "description": "Summarizes Google Scholar search results",
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": ["https://scholar.google.com/*", "http://127.0.0.1:5000/*"],
+  "action": {
+    "default_popup": "popup.html"
+  },
   "background": {
     "service_worker": "background.js"
   },
@@ -21,8 +16,5 @@
       "matches": ["https://scholar.google.com/scholar*"],
       "js": ["content.js"]
     }
-  ],
-  "action": {
-    "default_popup": "popup.html"
-  }
+  ]
 }
