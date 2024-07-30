@@ -25,7 +25,7 @@ The terminal window running the python backend should see the progress, if conce
 
 ## How does it work
 
-It has a JS frontend and a python/flask backend. The JS frontend load the google scholar search page for its query and the list of search result. The python backend crawls each link, summarize with `gpt-4o-mini` and the whole page. After that, the JS frontend re-render the page and insert the result to the page top and next to each result. The page should look like this and the summaries are in orange boxes:
+It has a JS frontend and a python/flask backend. The JS frontend load the google scholar search page for its query and the list of search result. The python backend crawls each link, summarize with `gpt-4o-mini` and the whole page. After that, the JS frontend re-render the page and insert the result to the page top and next to each result. The page should look like this and the summaries are in blue boxes:
 
 <image src="screenshots/scholar-extension.jpg" width="800">
 
