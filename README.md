@@ -6,7 +6,9 @@ High voltage warning: it is mostly for my personal use, never promised stability
 ## How to install
 
 1. Download the repo and unpack it.
-2. Add your OpenAI API key to `export OPENAI_API_KEY=sk-...`
+2. Add your OpenAI API key or Groq API key for Llama
+    - `export OPENAI_API_KEY=sk-...`
+    - `export GROQ_API_KEY=gsk_...` (check `app.py` how to switch to Llama models)
 3. Install Chrome extension in dev mode
     - Open Chrome and navigate to chrome://extensions/.
     - Enable "Developer mode" using the toggle in the top right corner.

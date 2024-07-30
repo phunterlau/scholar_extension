@@ -1,5 +1,7 @@
 from flask import Flask, request, jsonify
+# OpenAI or Groq or local models from Chrome or iOS in future
 from openai import OpenAI
+from groq import Groq
 import os
 import requests
 
@@ -8,11 +10,23 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app, resources={r"/summarize": {"origins": "chrome-extension://loojlaeieeklhbpngckhcjhcdcobieln"}})
 
+# cheap and fast gpt-4o-mini
+config_openai_dict = {'endpoint': "openai", 'model': "gpt-4o-mini", 'api_key': os.environ.get("OPENAI_API_KEY")}
+# Llama 3.1 8b is very fast, but the prompt needs some tuning.
+config_groq_dict = {'endpoint': "groq", 'model': "llama-3.1-8b-instant", 'api_key': os.environ.get("GROQ_API_KEY")}
 
-client = OpenAI(
-    # This is the default and can be omitted
-    api_key=os.environ.get("OPENAI_API_KEY"),
-)
+# switch between OpenAI/GPT and Groq/Llama 3.1
+#config_dict = config_groq_dict
+config_dict = config_openai_dict
+
+if config_dict['endpoint'] == "openai":
+    client = OpenAI(
+        api_key=config_dict['api_key']
+    )
+elif config_dict['endpoint'] == "groq":
+    client = Groq(
+        api_key=config_dict['api_key']
+    )
 
 @app.after_request
 def after_request(response):
@@ -52,7 +66,7 @@ def generate_summary(input_url):
 
     content = get_raw_content(input_url)
     response = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=config_dict['model'],
         messages=[
             {"role": "system", "content": "Summarize the following text from a scientific article in 200 words:"},
             {"role": "user", "content": content[:4000]}  # Limit content to 4000 tokens
@@ -64,9 +78,9 @@ def generate_summary(input_url):
 def generate_overall_summary(summaries, search_query):
     combined_summaries = " ".join(summaries)
     response = client.chat.completions.create(
-        model="gpt-4o",
+        model=config_dict['model'],
         messages=[
-            {"role": "system", "content": f"Given the Google Scholar search query '{search_query}', summarize the following summaries from scientific research articles in 200 words:"},
+            {"role": "system", "content": f"Given the Google Scholar search query '{search_query}', summarize the following summaries from scientific research article summaries in 200 words:"},
             {"role": "user", "content": combined_summaries}
         ]
     )
