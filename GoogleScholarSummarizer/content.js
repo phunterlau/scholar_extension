@@ -1,3 +1,23 @@
+let isSummarizationInProgress = false;
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'checkSummarizationStatus') {
+    if (isSummarizationInProgress) {
+      chrome.runtime.sendMessage({action: 'showStartMessage'});
+    }
+  }
+  // ... existing message handlers ...
+});
+
+async function processSearchResults() {
+  isSummarizationInProgress = true;
+  chrome.runtime.sendMessage({action: 'showStartMessage'});
+  
+  // ... existing code to fetch and process results ...
+
+  isSummarizationInProgress = false;
+}
+
 async function getPageContent(url) {
     try {
       const response = await fetch(url);

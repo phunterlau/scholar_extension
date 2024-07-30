@@ -1,13 +1,22 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Google Scholar Summarizer</title>
   <style>
-    body { width: 300px; padding: 10px; }
+    body {
+      width: 300px;
+      padding: 10px;
+      font-family: Arial, sans-serif;
+    }
+    #message {
+      display: none;
+      color: #4285F4;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
-  <h1>Google Scholar Summarizer</h1>
-  <p>Browse Google Scholar to see summaries of search results.</p>
+  <h2>Red Panda is reading for you!</h2>
+  <p id="message"></p>
+  <script src="popup.js"></script>
 </body>
 </html>

@@ -1,4 +1,7 @@
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'showStartMessage') {
+    chrome.runtime.sendMessage({action: 'showStartMessage'});
+  }
     if (request.action === 'summarize') {
       summarizeContents(request.data)
         .then(result => sendResponse({ success: true, ...result }))
