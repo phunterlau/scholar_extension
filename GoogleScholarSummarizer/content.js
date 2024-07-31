@@ -9,6 +9,30 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
+function addRedPandaIcon() {
+  const searchForm = document.querySelector('#gs_hdr_frm');
+  if (!searchForm) return;
+
+  let redPandaIcon = document.getElementById('redPandaIcon');
+  if (!redPandaIcon) {
+    redPandaIcon = document.createElement('img');
+    redPandaIcon.id = 'redPandaIcon';
+    redPandaIcon.src = chrome.runtime.getURL('images/red_panda_icon.gif');
+    redPandaIcon.style.cssText = `
+      width: 50px;
+      height: 50px;
+      position: absolute;
+      right: -60px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: none;
+    `;
+    searchForm.style.position = 'relative';
+    searchForm.appendChild(redPandaIcon);
+  }
+  return redPandaIcon;
+}
+
 function addProgressBar() {
   const searchForm = document.querySelector('#gs_hdr_frm');
   if (!searchForm) return;
@@ -45,6 +69,9 @@ async function processSearchResults() {
   if (isSummarizationInProgress) return;
   
   isSummarizationInProgress = true;
+  const redPandaIcon = addRedPandaIcon();
+  redPandaIcon.style.display = 'block';
+
   const articles = document.querySelectorAll('.gs_r.gs_or.gs_scl');
   totalArticles = articles.length;
   completedArticles = 0;
@@ -107,6 +134,7 @@ async function processSearchResults() {
   }
 
   isSummarizationInProgress = false;
+  redPandaIcon.style.display = 'none';
 }
 
 function getPageNumber() {
@@ -209,6 +237,12 @@ function downloadMarkdown() {
   }
 }
 
-// Add progress bar when the page loads
-document.addEventListener('DOMContentLoaded', addProgressBar);
-window.addEventListener('load', addProgressBar);
+// Add red panda icon and progress bar when the page loads
+document.addEventListener('DOMContentLoaded', () => {
+  addRedPandaIcon();
+  addProgressBar();
+});
+window.addEventListener('load', () => {
+  addRedPandaIcon();
+  addProgressBar();
+});
