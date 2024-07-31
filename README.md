@@ -5,6 +5,7 @@ High voltage warning: it is mostly for my personal use, never promised stability
 
 Change logs:
 
+* July 31 afternoon: added long term cache for search results; added "Download Summary" function to export to Markdown; Add red panda animation next to the search button to start summary.
 * July 31: update UI with a small blue line for progress bar under the search box; add red panda logo and user click the extension button to run summarization; add rate limiting to the backend.
 * July 30: add Llama 3.1 support via Groq; add "start summary" and a progress bar, and the summary shows up one by one when done.
 
@@ -14,6 +15,7 @@ Change logs:
 2. Add your OpenAI API key or Groq API key for Llama
     - `export OPENAI_API_KEY=sk-...`
     - (optional) `export GROQ_API_KEY=gsk_...` (check `app.py` how to switch to Llama models)
+    - (optional) `export JENA_READER_API_KEY=jina_` (check <https://jina.ai/reader/> for API use)
 3. Install Chrome extension in dev mode
     - Open Chrome and navigate to chrome://extensions/.
     - Enable "Developer mode" using the toggle in the top right corner.
@@ -26,9 +28,9 @@ Change logs:
 
 ## How to use
 
-After successful installation and the backend is running, one can find the extension as a scholarly red panda logo button when reach a google scholar search page. Click it and wait for a few seconds for the small blue line under the search box progress, one should see the summaries on the page.
+After successful installation and the backend is running, one can a scholarly red panda icon on a google scholar search page. Click it, see a nodding red panda animation, and wait for a few seconds for the progress bar finishing, one should see the summaries on the page.
 
-The terminal window running the python backend should see the progress, if concerned.
+The terminal window running the python backend should see the details, if concerned.
 
 ## How does it work
 
@@ -40,3 +42,8 @@ It has a JS frontend and a python/flask backend. The JS frontend load the google
 
 Well, we definitely need a JS expert for a better frontend and UI. The backend can be replaced by a JS backend as well, since it is just on-demand crawling plus OpenAI API calls. In future, it is possible to use on-device LLM provided by Chrome or MLC WebLLM.
 
+Another direction that I am working on: the flask backend can be powerful to collect external data beyond JS. Stay tuned.
+
+## Acknowledgement  
+
+* Jena.ai has a great reader function to crawl a webpage. Good job!
