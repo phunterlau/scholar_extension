@@ -52,8 +52,7 @@ def summarize():
             summary = generate_summary(item['link'])
             summaries.append(summary)
             progress = (i + 1) / total
-            # why "i+2"? because JS took index 1, so we need to add 1 to the index
-            yield f"data: {json.dumps({'progress': progress, 'summary': summary, 'index': i+2})}\n\n"
+            yield f"data: {json.dumps({'progress': progress, 'summary': summary, 'index': i+1})}\n\n"
 
         overall_summary = generate_overall_summary(summaries, search_query)
         yield f"data: {json.dumps({'progress': 1, 'overall_summary': overall_summary})}\n\n"
