@@ -5,6 +5,7 @@ High voltage warning: it is mostly for my personal use, never promised stability
 
 Change logs:
 
+* July 31: update UI with a small blue line for progress bar under the search box; add red panda logo and user click the extension button to run summarization; add rate limiting to the backend.
 * July 30: add Llama 3.1 support via Groq; add "start summary" and a progress bar, and the summary shows up one by one when done.
 
 ## How to install
@@ -12,7 +13,7 @@ Change logs:
 1. Download the repo and unpack it.
 2. Add your OpenAI API key or Groq API key for Llama
     - `export OPENAI_API_KEY=sk-...`
-    - `export GROQ_API_KEY=gsk_...` (check `app.py` how to switch to Llama models)
+    - (optional) `export GROQ_API_KEY=gsk_...` (check `app.py` how to switch to Llama models)
 3. Install Chrome extension in dev mode
     - Open Chrome and navigate to chrome://extensions/.
     - Enable "Developer mode" using the toggle in the top right corner.
@@ -25,7 +26,7 @@ Change logs:
 
 ## How to use
 
-After successful installation and the backend is running, one can find a "G" button when reach a google scholar search page. Click it and wait for a few seconds, one should see the summaries on the page.
+After successful installation and the backend is running, one can find the extension as a scholarly red panda logo button when reach a google scholar search page. Click it and wait for a few seconds for the small blue line under the search box progress, one should see the summaries on the page.
 
 The terminal window running the python backend should see the progress, if concerned.
 
