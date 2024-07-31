@@ -1,21 +1,51 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <style>
-    body {
-      width: 300px;
-      padding: 10px;
-      font-family: Arial, sans-serif;
-    }
-    #message {
-      color: #4285F4;
-      font-weight: bold;
-    }
-  </style>
+    <title>Scholarly Red Panda</title>
+    <style>
+        body {
+            width: 300px;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        .red-panda-icon {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 15px;
+        }
+        h1 {
+            color: #4285F4;
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+        p {
+            font-size: 14px;
+            line-height: 1.5;
+            color: #333;
+            text-align: left;
+        }
+        .github-link {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 15px;
+            background-color: #24292e;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        .github-link:hover {
+            background-color: #4285F4;
+        }
+    </style>
 </head>
 <body>
-  <h2>Scholarly Red Panda</h2>
-  <p id="message">Click the 'Summarize' button next to the Google Scholar search box to start summarizing.</p>
-  <script src="popup.js"></script>
+    <img src="images/red_panda_static.png" alt="Red Panda" class="red-panda-icon">
+    <h1>Scholarly Red Panda</h1>
+    <p id="message"></p>
+    <a href="https://github.com/phunterlau/scholar_extension" target="_blank" class="github-link">Fork me on GitHub</a>
+    <script src="popup.js"></script>
 </body>
 </html>

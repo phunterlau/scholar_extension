@@ -20,6 +20,7 @@
     }
   ],
   "action": {
+    "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
@@ -33,7 +34,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["images/red_panda_icon.gif"],
+      "resources": ["images/red_panda_static.png", "images/red_panda_animated.gif"],
       "matches": ["https://scholar.google.com/*"]
     }
   ]

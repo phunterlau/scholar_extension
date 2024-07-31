@@ -1,36 +1,66 @@
+// content.js
 let isSummarizationInProgress = false;
 let totalArticles = 0;
 let completedArticles = 0;
 let downloadToken = '';
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === "startSummarization") {
-    processSearchResults();
-  }
-});
-
 function addRedPandaIcon() {
   const searchForm = document.querySelector('#gs_hdr_frm');
   if (!searchForm) return;
 
-  let redPandaIcon = document.getElementById('redPandaIcon');
-  if (!redPandaIcon) {
-    redPandaIcon = document.createElement('img');
-    redPandaIcon.id = 'redPandaIcon';
-    redPandaIcon.src = chrome.runtime.getURL('images/red_panda_icon.gif');
-    redPandaIcon.style.cssText = `
+  let redPandaContainer = document.getElementById('redPandaContainer');
+  if (!redPandaContainer) {
+    redPandaContainer = document.createElement('div');
+    redPandaContainer.id = 'redPandaContainer';
+    redPandaContainer.style.cssText = `
       width: 50px;
       height: 50px;
       position: absolute;
       right: -60px;
       top: 50%;
       transform: translateY(-50%);
+      cursor: pointer;
+    `;
+    
+    const staticIcon = document.createElement('img');
+    staticIcon.id = 'redPandaStatic';
+    staticIcon.src = chrome.runtime.getURL('images/red_panda_static.png');
+    staticIcon.style.cssText = `
+      width: 100%;
+      height: 100%;
+      display: block;
+    `;
+
+    const animatedIcon = document.createElement('img');
+    animatedIcon.id = 'redPandaAnimated';
+    animatedIcon.src = chrome.runtime.getURL('images/red_panda_animated.gif');
+    animatedIcon.style.cssText = `
+      width: 100%;
+      height: 100%;
       display: none;
     `;
+
+    redPandaContainer.appendChild(staticIcon);
+    redPandaContainer.appendChild(animatedIcon);
     searchForm.style.position = 'relative';
-    searchForm.appendChild(redPandaIcon);
+    searchForm.appendChild(redPandaContainer);
+
+    // Add click event listener
+    redPandaContainer.addEventListener('click', startSummarization);
   }
-  return redPandaIcon;
+  return redPandaContainer;
+}
+
+function startSummarization() {
+  if (!isSummarizationInProgress) {
+    const staticIcon = document.getElementById('redPandaStatic');
+    const animatedIcon = document.getElementById('redPandaAnimated');
+    if (staticIcon && animatedIcon) {
+      staticIcon.style.display = 'none';
+      animatedIcon.style.display = 'block';
+    }
+    processSearchResults();
+  }
 }
 
 function addProgressBar() {
@@ -69,8 +99,6 @@ async function processSearchResults() {
   if (isSummarizationInProgress) return;
   
   isSummarizationInProgress = true;
-  const redPandaIcon = addRedPandaIcon();
-  redPandaIcon.style.display = 'block';
 
   const articles = document.querySelectorAll('.gs_r.gs_or.gs_scl');
   totalArticles = articles.length;
@@ -134,7 +162,12 @@ async function processSearchResults() {
   }
 
   isSummarizationInProgress = false;
-  redPandaIcon.style.display = 'none';
+  const staticIcon = document.getElementById('redPandaStatic');
+  const animatedIcon = document.getElementById('redPandaAnimated');
+  if (staticIcon && animatedIcon) {
+    staticIcon.style.display = 'block';
+    animatedIcon.style.display = 'none';
+  }
 }
 
 function getPageNumber() {
@@ -201,12 +234,22 @@ function displayOverallSummary(summary) {
     <h2 style="color: #4285F4; margin-top: 0;">Overall Summary</h2>
     ${renderBoldText(summary.replace(/\n\n/g, '<br><br>'))}
   `;
+
+  // Add the download button after setting the innerHTML
+  addDownloadButton();
 }
 
 function addDownloadButton() {
-  let downloadButton = document.getElementById('gs-summarizer-download');
-  if (!downloadButton) {
-    downloadButton = document.createElement('button');
+  let downloadButtonContainer = document.getElementById('gs-summarizer-download-container');
+  if (!downloadButtonContainer) {
+    downloadButtonContainer = document.createElement('div');
+    downloadButtonContainer.id = 'gs-summarizer-download-container';
+    downloadButtonContainer.style.cssText = `
+      margin-top: 15px;
+      text-align: left;
+    `;
+
+    let downloadButton = document.createElement('button');
     downloadButton.id = 'gs-summarizer-download';
     downloadButton.textContent = 'Download Summary';
     downloadButton.style.cssText = `
@@ -217,13 +260,14 @@ function addDownloadButton() {
       border-radius: 4px;
       cursor: pointer;
       font-family: Arial, sans-serif;
-      margin-top: 10px;
     `;
     downloadButton.addEventListener('click', downloadMarkdown);
     
+    downloadButtonContainer.appendChild(downloadButton);
+    
     const overallSummaryDiv = document.getElementById('gs-summarizer-overall');
     if (overallSummaryDiv) {
-      overallSummaryDiv.appendChild(downloadButton);
+      overallSummaryDiv.appendChild(downloadButtonContainer);
     }
   }
 }
