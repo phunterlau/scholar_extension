@@ -1,6 +1,7 @@
 let isSummarizationInProgress = false;
 let totalArticles = 0;
 let completedArticles = 0;
+let downloadToken = '';
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "startSummarization") {
@@ -54,20 +55,24 @@ async function processSearchResults() {
   const contents = [];
   for (let article of articles) {
     const link = article.querySelector('.gs_rt a')?.href;
-    if (link) {
-      contents.push({ link: link });
+    const title = article.querySelector('.gs_rt')?.textContent.trim();
+    if (link && title) {
+      contents.push({ link: link, title: title });
     }
   }
 
   const searchQuery = document.querySelector('#gs_hdr_tsi').value;
+  const pageNumber = getPageNumber();
 
   try {
     const response = await fetch('http://127.0.0.1:5000/summarize', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Origin': 'chrome-extension://loojlaeieeklhbpngckhcjhcdcobieln'
       },
-      body: JSON.stringify({ contents, searchQuery })
+      body: JSON.stringify({ contents, searchQuery, pageNumber }),
+      credentials: 'include'
     });
 
     const reader = response.body.getReader();
@@ -89,6 +94,10 @@ async function processSearchResults() {
             displayIndividualSummary(data.index - 1, data.summary);
           } else if (data.overall_summary) {
             displayOverallSummary(data.overall_summary);
+            if (data.token) {
+              downloadToken = data.token;
+              addDownloadButton();
+            }
           }
         }
       }
@@ -98,6 +107,11 @@ async function processSearchResults() {
   }
 
   isSummarizationInProgress = false;
+}
+
+function getPageNumber() {
+  const startParam = new URLSearchParams(window.location.search).get('start');
+  return startParam ? Math.floor(parseInt(startParam) / 10) + 1 : 1;
 }
 
 function updateProgress(progress) {
@@ -159,6 +173,40 @@ function displayOverallSummary(summary) {
     <h2 style="color: #4285F4; margin-top: 0;">Overall Summary</h2>
     ${renderBoldText(summary.replace(/\n\n/g, '<br><br>'))}
   `;
+}
+
+function addDownloadButton() {
+  let downloadButton = document.getElementById('gs-summarizer-download');
+  if (!downloadButton) {
+    downloadButton = document.createElement('button');
+    downloadButton.id = 'gs-summarizer-download';
+    downloadButton.textContent = 'Download Summary';
+    downloadButton.style.cssText = `
+      background-color: #4285F4;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: Arial, sans-serif;
+      margin-top: 10px;
+    `;
+    downloadButton.addEventListener('click', downloadMarkdown);
+    
+    const overallSummaryDiv = document.getElementById('gs-summarizer-overall');
+    if (overallSummaryDiv) {
+      overallSummaryDiv.appendChild(downloadButton);
+    }
+  }
+}
+
+function downloadMarkdown() {
+  if (downloadToken) {
+    const downloadUrl = `http://127.0.0.1:5000/download_markdown/${downloadToken}`;
+    window.open(downloadUrl, '_blank');
+  } else {
+    console.error('Download token not available');
+  }
 }
 
 // Add progress bar when the page loads

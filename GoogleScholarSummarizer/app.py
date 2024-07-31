@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, jsonify, Response, send_file
 from openai import OpenAI
 from groq import Groq
 import os
@@ -9,9 +9,13 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import sqlite3
 from hashlib import md5
+import io
+import uuid
+from cachelib import SimpleCache
 
 app = Flask(__name__)
-CORS(app, resources={r"/summarize": {"origins": "chrome-extension://loojlaeieeklhbpngckhcjhcdcobieln"}})
+app.secret_key = os.urandom(24)  # Set a secret key for sessions
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
 # Initialize the rate limiter
 limiter = Limiter(
@@ -20,6 +24,15 @@ limiter = Limiter(
     default_limits=["1 per 30 seconds"],
     storage_uri="memory://"
 )
+
+# Define a custom error handler for rate limiting
+def ratelimit_error_handler(e):
+    return jsonify({"error": "Rate limit exceeded"}), 429
+
+limiter.request_filter(lambda: request.method == "OPTIONS")
+
+# Initialize a cache
+cache = SimpleCache()
 
 config_openai_dict = {'endpoint': "openai", 'model': "gpt-4o-mini", 'api_key': os.environ.get("OPENAI_API_KEY")}
 config_groq_dict = {'endpoint': "groq", 'model': "llama-3.1-8b-instant", 'api_key': os.environ.get("GROQ_API_KEY")}
@@ -63,23 +76,23 @@ def save_to_cache(url, raw_content, summary):
     conn.commit()
     conn.close()
 
-@app.after_request
-def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', '*')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-    return response
-
-@app.route('/summarize', methods=['POST'])
-@limiter.limit("1 per 30 seconds", error_message='', on_breach=lambda: jsonify({"error": "Rate limit exceeded"}))
+@app.route('/summarize', methods=['POST', 'OPTIONS'])
+@limiter.limit("1 per 30 seconds", error_message='Rate limit exceeded')
 def summarize():
+    if request.method == 'OPTIONS':
+        return '', 204
     data = request.json
     contents = data['contents']
     search_query = data['searchQuery']
+    page_number = data.get('pageNumber', 1)
+
+    # Generate a unique token for this summarization request
+    token = str(uuid.uuid4())
 
     def generate():
         summaries = [""]  # JS took index 1, so we need to add an empty string to index 0
         total = len(contents)
+        markdown_content = f"# Google Scholar Search Results Summary\n\n## Search Query: {search_query}\n\n## Page Number: {page_number}\n\n"
         
         for i, item in enumerate(contents):
             cached_data = get_from_cache(item['link'])
@@ -91,13 +104,38 @@ def summarize():
                 save_to_cache(item['link'], raw_content, summary)
             
             summaries.append(summary)
+            markdown_content += f"### [{item['title']}]({item['link']})\n\n{summary}\n\n"
             progress = (i + 1) / total
             yield f"data: {json.dumps({'progress': progress, 'summary': summary, 'index': i+1})}\n\n"
 
         overall_summary = generate_overall_summary(summaries, search_query)
-        yield f"data: {json.dumps({'progress': 1, 'overall_summary': overall_summary})}\n\n"
+        markdown_content = f"## Overall Summary\n\n{overall_summary}\n\n" + markdown_content
+        
+        # Store the markdown content in the cache with the token as the key
+        cache.set(token, markdown_content, timeout=600)  # Cache for 10 minutes
+
+        yield f"data: {json.dumps({'progress': 1, 'overall_summary': overall_summary, 'token': token})}\n\n"
 
     return Response(generate(), content_type='text/event-stream')
+
+@app.route('/download_markdown/<token>', methods=['GET'])
+def download_markdown(token):
+    markdown_content = cache.get(token)
+    
+    if markdown_content is None:
+        return jsonify({"error": "Markdown content not found or expired"}), 404
+    
+    # Create a BytesIO object and write the markdown content to it
+    buffer = io.BytesIO()
+    buffer.write(markdown_content.encode())
+    buffer.seek(0)
+    
+    return send_file(
+        buffer,
+        as_attachment=True,
+        download_name='scholar_summary.md',
+        mimetype='text/markdown'
+    )
 
 def get_raw_content(input_url):
     url = f"https://r.jina.ai/{input_url}"
