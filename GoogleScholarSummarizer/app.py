@@ -13,6 +13,8 @@ import io
 import uuid
 from cachelib import SimpleCache
 
+import re
+
 app = Flask(__name__)
 app.secret_key = os.urandom(24)  # Set a secret key for sessions
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
@@ -76,6 +78,13 @@ def save_to_cache(url, raw_content, summary):
     conn.commit()
     conn.close()
 
+def sanitize_filename(filename):
+    # Remove any non-word characters (everything except numbers and letters)
+    filename = re.sub(r'[^\w\s-]', '', filename)
+    # Replace all runs of whitespace with a single dash
+    filename = re.sub(r'\s+', '-', filename)
+    return filename.strip('-')[:50]  # Trim to 50 characters max
+
 @app.route('/summarize', methods=['POST', 'OPTIONS'])
 @limiter.limit("1 per 30 seconds", error_message='Rate limit exceeded')
 def summarize():
@@ -111,8 +120,8 @@ def summarize():
         overall_summary = generate_overall_summary(summaries, search_query)
         markdown_content = f"## Overall Summary\n\n{overall_summary}\n\n" + markdown_content
         
-        # Store the markdown content in the cache with the token as the key
-        cache.set(token, markdown_content, timeout=600)  # Cache for 10 minutes
+        # Store the markdown content in the short life cache with the token as the key
+        cache.set(token, (markdown_content, search_query, page_number), timeout=1800) 
 
         yield f"data: {json.dumps({'progress': 1, 'overall_summary': overall_summary, 'token': token})}\n\n"
 
@@ -120,20 +129,25 @@ def summarize():
 
 @app.route('/download_markdown/<token>', methods=['GET'])
 def download_markdown(token):
-    markdown_content = cache.get(token)
+    cached_data = cache.get(token)
     
+    markdown_content, search_query, page_number = cached_data
     if markdown_content is None:
         return jsonify({"error": "Markdown content not found or expired"}), 404
     
+    sanitized_query = sanitize_filename(search_query)
+
     # Create a BytesIO object and write the markdown content to it
     buffer = io.BytesIO()
     buffer.write(markdown_content.encode())
     buffer.seek(0)
+
+    filename = f'scholar_summary-{sanitized_query}-page{page_number}.md'
     
     return send_file(
         buffer,
         as_attachment=True,
-        download_name='scholar_summary.md',
+        download_name=filename,
         mimetype='text/markdown'
     )
 
