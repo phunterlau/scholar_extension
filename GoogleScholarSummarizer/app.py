@@ -7,6 +7,8 @@ from flask_cors import CORS
 import json
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+import sqlite3
+from hashlib import md5
 
 app = Flask(__name__)
 CORS(app, resources={r"/summarize": {"origins": "chrome-extension://loojlaeieeklhbpngckhcjhcdcobieln"}})
@@ -32,6 +34,35 @@ elif config_dict['endpoint'] == "groq":
 
 jena_reader_api_key = os.environ.get('JENA_READER_API_KEY')
 
+# Initialize SQLite database
+def init_db():
+    conn = sqlite3.connect('cache.db')
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS cache
+                 (url_hash TEXT PRIMARY KEY, url TEXT, raw_content TEXT, summary TEXT)''')
+    conn.commit()
+    conn.close()
+
+init_db()
+
+def get_from_cache(url):
+    url_hash = md5(url.encode()).hexdigest()
+    conn = sqlite3.connect('cache.db')
+    c = conn.cursor()
+    c.execute("SELECT raw_content, summary FROM cache WHERE url_hash = ?", (url_hash,))
+    result = c.fetchone()
+    conn.close()
+    return result
+
+def save_to_cache(url, raw_content, summary):
+    url_hash = md5(url.encode()).hexdigest()
+    conn = sqlite3.connect('cache.db')
+    c = conn.cursor()
+    c.execute("INSERT OR REPLACE INTO cache (url_hash, url, raw_content, summary) VALUES (?, ?, ?, ?)",
+              (url_hash, url, raw_content, summary))
+    conn.commit()
+    conn.close()
+
 @app.after_request
 def after_request(response):
     response.headers.add('Access-Control-Allow-Origin', '*')
@@ -51,7 +82,14 @@ def summarize():
         total = len(contents)
         
         for i, item in enumerate(contents):
-            summary = generate_summary(item['link'])
+            cached_data = get_from_cache(item['link'])
+            if cached_data:
+                raw_content, summary = cached_data
+            else:
+                raw_content = get_raw_content(item['link'])
+                summary = generate_summary(raw_content)
+                save_to_cache(item['link'], raw_content, summary)
+            
             summaries.append(summary)
             progress = (i + 1) / total
             yield f"data: {json.dumps({'progress': progress, 'summary': summary, 'index': i+1})}\n\n"
@@ -73,8 +111,7 @@ def get_raw_content(input_url):
     
     return response.text
 
-def generate_summary(input_url):
-    content = get_raw_content(input_url)
+def generate_summary(content):
     response = client.chat.completions.create(
         model=config_dict['model'],
         messages=[
@@ -82,7 +119,6 @@ def generate_summary(input_url):
             {"role": "user", "content": content[:4000]}  # Limit content to 4000 tokens
         ]
     )
-    print(f"finished {input_url}")
     return response.choices[0].message.content
 
 def generate_overall_summary(summaries, search_query):
