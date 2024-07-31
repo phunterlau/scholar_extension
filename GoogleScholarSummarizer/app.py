@@ -30,6 +30,8 @@ if config_dict['endpoint'] == "openai":
 elif config_dict['endpoint'] == "groq":
     client = Groq(api_key=config_dict['api_key'])
 
+jena_reader_api_key = os.environ.get('JENA_READER_API_KEY')
+
 @app.after_request
 def after_request(response):
     response.headers.add('Access-Control-Allow-Origin', '*')
@@ -61,7 +63,14 @@ def summarize():
 
 def get_raw_content(input_url):
     url = f"https://r.jina.ai/{input_url}"
-    response = requests.get(url)
+    api_key = jena_reader_api_key
+    
+    if api_key:
+        headers = {"Authorization": f"Bearer {api_key}"}
+        response = requests.get(url, headers=headers)
+    else:
+        response = requests.get(url)
+    
     return response.text
 
 def generate_summary(input_url):
