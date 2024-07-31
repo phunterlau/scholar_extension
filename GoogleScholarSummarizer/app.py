@@ -5,15 +5,25 @@ import os
 import requests
 from flask_cors import CORS
 import json
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 app = Flask(__name__)
 CORS(app, resources={r"/summarize": {"origins": "chrome-extension://loojlaeieeklhbpngckhcjhcdcobieln"}})
 
+# Initialize the rate limiter
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["1 per 30 seconds"],
+    storage_uri="memory://"
+)
+
 config_openai_dict = {'endpoint': "openai", 'model': "gpt-4o-mini", 'api_key': os.environ.get("OPENAI_API_KEY")}
 config_groq_dict = {'endpoint': "groq", 'model': "llama-3.1-8b-instant", 'api_key': os.environ.get("GROQ_API_KEY")}
 
-# config_dict = config_openai_dict
-config_dict = config_groq_dict
+config_dict = config_openai_dict
+#config_dict = config_groq_dict
 
 if config_dict['endpoint'] == "openai":
     client = OpenAI(api_key=config_dict['api_key'])
@@ -28,6 +38,7 @@ def after_request(response):
     return response
 
 @app.route('/summarize', methods=['POST'])
+@limiter.limit("1 per 30 seconds", error_message='', on_breach=lambda: jsonify({"error": "Rate limit exceeded"}))
 def summarize():
     data = request.json
     contents = data['contents']
