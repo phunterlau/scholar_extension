@@ -1,3 +1,6 @@
+requests
+groq
+flask
 openai
 flask-cors
 Flask-Limiter
