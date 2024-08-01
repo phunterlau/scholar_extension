@@ -14,8 +14,11 @@ import uuid
 from cachelib import SimpleCache
 import jwt
 from functools import wraps
-import re
 import datetime
+import re
+from collections import Counter
+import threading
+import time
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)  # Set a secret key for sessions
@@ -42,7 +45,6 @@ config_openai_dict = {'endpoint': "openai", 'model': "gpt-4o-mini", 'api_key': o
 config_groq_dict = {'endpoint': "groq", 'model': "gemma2-9b-it", 'api_key': os.environ.get("GROQ_API_KEY")}
 
 config_dict = config_openai_dict
-#config_dict = config_groq_dict
 
 if config_dict['endpoint'] == "openai":
     client = OpenAI(api_key=config_dict['api_key'])
@@ -52,29 +54,21 @@ elif config_dict['endpoint'] == "groq":
 jena_reader_api_key = os.environ.get('JENA_READER_API_KEY')
 
 # Secret key for JWT - store this securely and don't expose it
-JWT_SECRET = os.environ.get('JWT_SECRET', 'your-secret-key')
+JWT_SECRET = os.environ.get('JWT_SECRET', 'your_secure_secret_here')
 
-@app.route('/get_token', methods=['POST'])
-def get_token():
-    unique_id = request.json.get('uniqueId')
-    if not unique_id:
-        return jsonify({'message': 'Unique ID is required'}), 400
-    
-    # Generate a JWT
-    token = jwt.encode({
-        'sub': unique_id,
-        'iat': datetime.datetime.utcnow(),
-        'exp': datetime.datetime.utcnow() + datetime.timedelta(days=30)
-    }, JWT_SECRET, algorithm='HS256')
-    
-    return jsonify({'token': token})
+# Global counter for link frequencies
+link_counter = Counter()
 
-# Initialize SQLite database
+# Lock for thread-safe operations on the counter
+counter_lock = threading.Lock()
+
 def init_db():
     conn = sqlite3.connect('cache.db')
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS cache
                  (url_hash TEXT PRIMARY KEY, url TEXT, raw_content TEXT, summary TEXT)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS link_frequency
+                 (url_hash TEXT PRIMARY KEY, url TEXT, frequency INTEGER)''')
     conn.commit()
     conn.close()
 
@@ -86,12 +80,12 @@ def token_required(f):
         if request.method == 'OPTIONS':
             return jsonify({'message': 'OK'}), 200
         
-        print("Headers:", request.headers)  # Print all headers
+        print("Headers:", request.headers)
         
         token = None
         if 'Authorization' in request.headers:
             auth_header = request.headers['Authorization']
-            print("Authorization header:", auth_header)  # Print the Authorization header
+            print("Authorization header:", auth_header)
             try:
                 token = auth_header.split(" ")[1]
             except IndexError:
@@ -104,16 +98,42 @@ def token_required(f):
         
         try:
             decoded = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
-            print("Decoded token:", decoded)  # Print the decoded token
+            print("Decoded token:", decoded)
         except jwt.ExpiredSignatureError:
             print("Token has expired")
             return jsonify({'message': 'Token has expired!'}), 401
-        except jwt.InvalidTokenError:
-            print("Invalid token")
+        except jwt.InvalidTokenError as e:
+            print("Invalid token:", str(e))
             return jsonify({'message': 'Invalid token!'}), 401
+        except Exception as e:
+            print("Unexpected error during token validation:", str(e))
+            return jsonify({'message': 'Error validating token!'}), 401
         
         return f(*args, **kwargs)
     return decorated
+
+def update_link_frequency(url):
+    with counter_lock:
+        link_counter[url] += 1
+
+def batch_update_db():
+    while True:
+        time.sleep(300)  # Wait for 5 minutes
+        with counter_lock:
+            if link_counter:
+                conn = sqlite3.connect('cache.db')
+                c = conn.cursor()
+                for url, count in link_counter.items():
+                    url_hash = md5(url.encode()).hexdigest()
+                    c.execute("""
+                        INSERT INTO link_frequency (url_hash, url, frequency)
+                        VALUES (?, ?, ?)
+                        ON CONFLICT(url_hash) DO UPDATE SET
+                        frequency = frequency + ?
+                    """, (url_hash, url, count, count))
+                conn.commit()
+                conn.close()
+                link_counter.clear()
 
 def get_from_cache(url):
     url_hash = md5(url.encode()).hexdigest()
@@ -122,6 +142,10 @@ def get_from_cache(url):
     c.execute("SELECT raw_content, summary FROM cache WHERE url_hash = ?", (url_hash,))
     result = c.fetchone()
     conn.close()
+    
+    # Update frequency in memory
+    update_link_frequency(url)
+    
     return result
 
 def save_to_cache(url, raw_content, summary):
@@ -140,12 +164,27 @@ def sanitize_filename(filename):
     filename = re.sub(r'\s+', '-', filename)
     return filename.strip('-')[:50]  # Trim to 50 characters max
 
+@app.route('/get_token', methods=['POST'])
+def get_token():
+    unique_id = request.json.get('uniqueId')
+    if not unique_id:
+        return jsonify({'message': 'Unique ID is required'}), 400
+    
+    # Generate a JWT
+    token = jwt.encode({
+        'sub': unique_id,
+        'iat': datetime.datetime.utcnow(),
+        'exp': datetime.datetime.utcnow() + datetime.timedelta(days=30)
+    }, JWT_SECRET, algorithm='HS256')
+    
+    return jsonify({'token': token})
+
 @app.route('/summarize', methods=['POST', 'OPTIONS'])
 @limiter.limit("1 per 30 seconds", error_message='Rate limit exceeded')
 @token_required
 def summarize():
     if request.method == 'OPTIONS':
-        return jsonify({'message': 'OK'}), 200
+        return '', 204
     data = request.json
     contents = data['contents']
     search_query = data['searchQuery']
@@ -183,11 +222,9 @@ def summarize():
 
     return Response(generate(), content_type='text/event-stream')
 
-@app.route('/download_markdown/<token>', methods=['GET', 'OPTIONS'])
+@app.route('/download_markdown/<token>', methods=['GET'])
 @token_required
 def download_markdown(token):
-    if request.method == 'OPTIONS':
-        return jsonify({'message': 'OK'}), 200
     cached_data = cache.get(token)
     
     if cached_data is None:
@@ -210,6 +247,22 @@ def download_markdown(token):
         download_name=filename,
         mimetype='text/markdown'
     )
+
+@app.route('/link_frequency', methods=['GET'])
+@token_required
+def get_link_frequency():
+    conn = sqlite3.connect('cache.db')
+    c = conn.cursor()
+    c.execute("""
+        SELECT lf.url, lf.frequency + COALESCE(c.count, 0) as total_frequency 
+        FROM link_frequency lf
+        LEFT JOIN (SELECT url, COUNT(*) as count FROM link_counter GROUP BY url) c
+        ON lf.url = c.url
+        ORDER BY total_frequency DESC LIMIT 100
+    """)
+    result = c.fetchall()
+    conn.close()
+    return jsonify([{'url': row[0], 'frequency': row[1]} for row in result])
 
 def get_raw_content(input_url):
     url = f"https://r.jina.ai/{input_url}"
@@ -247,4 +300,6 @@ def generate_overall_summary(summaries, search_query):
     return output
 
 if __name__ == '__main__':
+    batch_update_thread = threading.Thread(target=batch_update_db, daemon=True)
+    batch_update_thread.start()
     app.run(debug=True)
