@@ -2,3 +2,4 @@ openai
 flask-cors
 Flask-Limiter
 cachelib
+PyJWT

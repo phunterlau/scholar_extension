@@ -12,8 +12,10 @@ from hashlib import md5
 import io
 import uuid
 from cachelib import SimpleCache
-
+import jwt
+from functools import wraps
 import re
+import datetime
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)  # Set a secret key for sessions
@@ -37,7 +39,7 @@ limiter.request_filter(lambda: request.method == "OPTIONS")
 cache = SimpleCache()
 
 config_openai_dict = {'endpoint': "openai", 'model': "gpt-4o-mini", 'api_key': os.environ.get("OPENAI_API_KEY")}
-config_groq_dict = {'endpoint': "groq", 'model': "llama-3.1-8b-instant", 'api_key': os.environ.get("GROQ_API_KEY")}
+config_groq_dict = {'endpoint': "groq", 'model': "gemma2-9b-it", 'api_key': os.environ.get("GROQ_API_KEY")}
 
 config_dict = config_openai_dict
 #config_dict = config_groq_dict
@@ -49,6 +51,24 @@ elif config_dict['endpoint'] == "groq":
 
 jena_reader_api_key = os.environ.get('JENA_READER_API_KEY')
 
+# Secret key for JWT - store this securely and don't expose it
+JWT_SECRET = os.environ.get('JWT_SECRET', 'your-secret-key')
+
+@app.route('/get_token', methods=['POST'])
+def get_token():
+    unique_id = request.json.get('uniqueId')
+    if not unique_id:
+        return jsonify({'message': 'Unique ID is required'}), 400
+    
+    # Generate a JWT
+    token = jwt.encode({
+        'sub': unique_id,
+        'iat': datetime.datetime.utcnow(),
+        'exp': datetime.datetime.utcnow() + datetime.timedelta(days=30)
+    }, JWT_SECRET, algorithm='HS256')
+    
+    return jsonify({'token': token})
+
 # Initialize SQLite database
 def init_db():
     conn = sqlite3.connect('cache.db')
@@ -59,6 +79,41 @@ def init_db():
     conn.close()
 
 init_db()
+
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if request.method == 'OPTIONS':
+            return jsonify({'message': 'OK'}), 200
+        
+        print("Headers:", request.headers)  # Print all headers
+        
+        token = None
+        if 'Authorization' in request.headers:
+            auth_header = request.headers['Authorization']
+            print("Authorization header:", auth_header)  # Print the Authorization header
+            try:
+                token = auth_header.split(" ")[1]
+            except IndexError:
+                print("Malformed Authorization header")
+                return jsonify({'message': 'Malformed Authorization header'}), 401
+        
+        if not token:
+            print("Token is missing")
+            return jsonify({'message': 'Token is missing!'}), 401
+        
+        try:
+            decoded = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+            print("Decoded token:", decoded)  # Print the decoded token
+        except jwt.ExpiredSignatureError:
+            print("Token has expired")
+            return jsonify({'message': 'Token has expired!'}), 401
+        except jwt.InvalidTokenError:
+            print("Invalid token")
+            return jsonify({'message': 'Invalid token!'}), 401
+        
+        return f(*args, **kwargs)
+    return decorated
 
 def get_from_cache(url):
     url_hash = md5(url.encode()).hexdigest()
@@ -87,9 +142,10 @@ def sanitize_filename(filename):
 
 @app.route('/summarize', methods=['POST', 'OPTIONS'])
 @limiter.limit("1 per 30 seconds", error_message='Rate limit exceeded')
+@token_required
 def summarize():
     if request.method == 'OPTIONS':
-        return '', 204
+        return jsonify({'message': 'OK'}), 200
     data = request.json
     contents = data['contents']
     search_query = data['searchQuery']
@@ -127,13 +183,17 @@ def summarize():
 
     return Response(generate(), content_type='text/event-stream')
 
-@app.route('/download_markdown/<token>', methods=['GET'])
+@app.route('/download_markdown/<token>', methods=['GET', 'OPTIONS'])
+@token_required
 def download_markdown(token):
+    if request.method == 'OPTIONS':
+        return jsonify({'message': 'OK'}), 200
     cached_data = cache.get(token)
     
-    markdown_content, search_query, page_number = cached_data
-    if markdown_content is None:
+    if cached_data is None:
         return jsonify({"error": "Markdown content not found or expired"}), 404
+
+    markdown_content, search_query, page_number = cached_data
     
     sanitized_query = sanitize_filename(search_query)
 

@@ -4,7 +4,8 @@
   "version": "1.0",
   "description": "Summarizes Google Scholar search results",
   "permissions": [
-    "activeTab"
+    "activeTab",
+    "storage"
   ],
   "host_permissions": [
     "https://scholar.google.com/*",

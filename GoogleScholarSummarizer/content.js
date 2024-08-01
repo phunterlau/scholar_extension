@@ -1,8 +1,38 @@
-// content.js
 let isSummarizationInProgress = false;
 let totalArticles = 0;
 let completedArticles = 0;
 let downloadToken = '';
+
+async function getValidToken() {
+  let token = await new Promise((resolve) => {
+    chrome.storage.sync.get(['userToken', 'extensionUniqueId'], function(result) {
+      resolve({ token: result.userToken, uniqueId: result.extensionUniqueId });
+    });
+  });
+
+  if (!token.token) {
+    // No token, request a new one
+    const response = await fetch('http://127.0.0.1:5000/get_token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ uniqueId: token.uniqueId }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      token.token = data.token;
+      // Store the new token
+      chrome.storage.sync.set({ 'userToken': token.token });
+    } else {
+      console.error('Failed to get token');
+      return null;
+    }
+  }
+
+  return token.token;
+}
 
 function addRedPandaIcon() {
   const searchForm = document.querySelector('#gs_hdr_frm');
@@ -45,7 +75,6 @@ function addRedPandaIcon() {
     searchForm.style.position = 'relative';
     searchForm.appendChild(redPandaContainer);
 
-    // Add click event listener
     redPandaContainer.addEventListener('click', startSummarization);
   }
   return redPandaContainer;
@@ -100,6 +129,13 @@ async function processSearchResults() {
   
   isSummarizationInProgress = true;
 
+  const userToken = await getValidToken();
+  if (!userToken) {
+    console.error('No valid token available');
+    isSummarizationInProgress = false;
+    return;
+  }
+
   const articles = document.querySelectorAll('.gs_r.gs_or.gs_scl');
   totalArticles = articles.length;
   completedArticles = 0;
@@ -124,11 +160,18 @@ async function processSearchResults() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Origin': 'chrome-extension://loojlaeieeklhbpngckhcjhcdcobieln'
+        'Authorization': `Bearer ${userToken}`,
       },
       body: JSON.stringify({ contents, searchQuery, pageNumber }),
-      credentials: 'include'
+      mode: 'cors',
     });
+
+    if (!response.ok) {
+      console.error("Response not OK:", response.status, response.statusText);
+      const errorText = await response.text();
+      console.error("Error response:", errorText);
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
@@ -235,7 +278,6 @@ function displayOverallSummary(summary) {
     ${renderBoldText(summary.replace(/\n\n/g, '<br><br>'))}
   `;
 
-  // Add the download button after setting the innerHTML
   addDownloadButton();
 }
 
@@ -272,20 +314,56 @@ function addDownloadButton() {
   }
 }
 
-function downloadMarkdown() {
+async function downloadMarkdown() {
   if (downloadToken) {
+    const userToken = await getValidToken();
+    if (!userToken) {
+      console.error('No valid token available for download');
+      return;
+    }
+
     const downloadUrl = `http://127.0.0.1:5000/download_markdown/${downloadToken}`;
-    window.open(downloadUrl, '_blank');
+    fetch(downloadUrl, {
+      headers: {
+        'Authorization': `Bearer ${userToken}`
+      }
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      return response.blob();
+    })
+    .then(blob => {
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      
+      // Get the search query and page number
+      const searchQuery = document.querySelector('#gs_hdr_tsi').value;
+      const pageNumber = getPageNumber();
+      
+      // Create a filename based on the search query and page number
+      const sanitizedQuery = searchQuery.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      const filename = `scholar_summary_${sanitizedQuery}_page${pageNumber}.md`;
+      
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+    })
+    .catch(error => console.error('Error:', error));
   } else {
     console.error('Download token not available');
   }
 }
 
-// Add red panda icon and progress bar when the page loads
 document.addEventListener('DOMContentLoaded', () => {
   addRedPandaIcon();
   addProgressBar();
 });
+
 window.addEventListener('load', () => {
   addRedPandaIcon();
   addProgressBar();
