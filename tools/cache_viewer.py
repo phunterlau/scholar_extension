@@ -1,5 +1,6 @@
 import sqlite3
 import sys
+from datetime import datetime, date
 
 def view_cache_content(limit=None, search_term=None):
     conn = sqlite3.connect('cache.db')
@@ -7,7 +8,7 @@ def view_cache_content(limit=None, search_term=None):
 
     if search_term:
         query = """
-        SELECT c.url, c.raw_content, c.summary, COALESCE(lf.frequency, 0) as frequency
+        SELECT c.url, c.raw_content, c.summary, c.date_cached, COALESCE(lf.frequency, 0) as frequency
         FROM cache c
         LEFT JOIN link_frequency lf ON c.url_hash = lf.url_hash
         WHERE c.url LIKE ? OR c.raw_content LIKE ? OR c.summary LIKE ?
@@ -16,7 +17,7 @@ def view_cache_content(limit=None, search_term=None):
         params = ('%' + search_term + '%',) * 3
     else:
         query = """
-        SELECT c.url, c.raw_content, c.summary, COALESCE(lf.frequency, 0) as frequency
+        SELECT c.url, c.raw_content, c.summary, c.date_cached, COALESCE(lf.frequency, 0) as frequency
         FROM cache c
         LEFT JOIN link_frequency lf ON c.url_hash = lf.url_hash
         ORDER BY c.url
@@ -33,10 +34,22 @@ def view_cache_content(limit=None, search_term=None):
         print("No entries found in the cache.")
         return
 
-    for i, (url, raw_content, summary, frequency) in enumerate(rows, 1):
+    today = date.today()
+    for i, (url, raw_content, summary, date_cached, frequency) in enumerate(rows, 1):
         print(f"\n--- Entry {i} ---")
         print(f"URL: {url}")
         print(f"Frequency: {frequency}")
+        print(f"Date Cached: {date_cached}")
+        
+        cached_date = datetime.strptime(date_cached, "%Y-%m-%d").date()
+        days_since_cached = (today - cached_date).days
+        print(f"Days since cached: {days_since_cached}")
+        
+        if days_since_cached <= 7:
+            print("Status: Valid")
+        else:
+            print("Status: Expired")
+        
         print(f"Raw Content (first 100 characters): {raw_content[:100]}...")
         print(f"Summary: {summary}")
         print("-" * 50)

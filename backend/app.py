@@ -11,9 +11,12 @@ import datetime
 import jwt
 
 from config import JWT_SECRET
-from database import init_db, get_from_cache, save_to_cache
+from database import init_db, get_from_cache, save_to_cache, clear_expired_cache
 from ai_service import get_raw_content, generate_summary, generate_overall_summary
 from utils import token_required, sanitize_filename, update_link_frequency
+
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.triggers.cron import CronTrigger
 
 app = Flask(__name__)
 app.secret_key = JWT_SECRET
@@ -30,6 +33,11 @@ limiter = Limiter(
 limiter.request_filter(lambda: request.method == "OPTIONS")
 
 cache = SimpleCache()
+
+# Set up the scheduler to run at 3:00 AM every day
+scheduler = BackgroundScheduler()
+scheduler.add_job(func=clear_expired_cache, trigger=CronTrigger(hour=3, minute=0))
+scheduler.start()
 
 @app.route('/get_token', methods=['POST', 'OPTIONS'])
 @limiter.exempt

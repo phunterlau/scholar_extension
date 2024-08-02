@@ -5,7 +5,8 @@ High voltage warning: it is mostly for my personal use, never promised stability
 
 Change logs:
 
-* Aug 1: add token auth
+* Aug 2: added link cache expiration
+* Aug 1: added token auth, refactorized backend.
 * July 31 afternoon: added long term cache for search results; added "Download Summary" function to export to Markdown; Add red panda animation next to the search button to start summary.
 * July 31: update UI with a small blue line for progress bar under the search box; add red panda logo and user click the extension button to run summarization; add rate limiting to the backend.
 * July 30: add Llama 3.1 support via Groq; add "start summary" and a progress bar, and the summary shows up one by one when done.
