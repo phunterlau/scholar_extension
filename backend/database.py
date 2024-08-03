@@ -2,6 +2,7 @@ import sqlite3
 from hashlib import md5
 from utils import update_link_frequency
 import datetime
+import json
 
 def init_db():
     conn = sqlite3.connect('cache.db')
@@ -22,24 +23,26 @@ def get_from_cache(url):
     conn.close()
 
     if result:
-        raw_content, summary, date_cached = result
+        raw_content, summary_json, date_cached = result
         current_date = datetime.date.today()
         cached_date = datetime.datetime.strptime(date_cached, "%Y-%m-%d").date()
         if (current_date - cached_date).days <= 7:
             update_link_frequency(url)
-            return raw_content, summary
+            return raw_content, json.loads(summary_json)
     
     return None
 
 def save_to_cache(url, raw_content, summary):
     url_hash = md5(url.encode()).hexdigest()
     date_cached = datetime.date.today().isoformat()
+    summary_json = json.dumps(summary)
     conn = sqlite3.connect('cache.db')
     c = conn.cursor()
     c.execute("INSERT OR REPLACE INTO cache (url_hash, url, raw_content, summary, date_cached) VALUES (?, ?, ?, ?, ?)",
-              (url_hash, url, raw_content, summary, date_cached))
+              (url_hash, url, raw_content, summary_json, date_cached))
     conn.commit()
     conn.close()
+
 
 def clear_expired_cache():
     expiration_date = (datetime.date.today() - datetime.timedelta(days=7)).isoformat()

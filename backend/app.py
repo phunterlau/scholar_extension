@@ -83,17 +83,26 @@ def summarize():
                 summary = generate_summary(raw_content)
                 save_to_cache(item['link'], raw_content, summary)
             
-            summaries.append(summary)
-            markdown_content += f"### [{item['title']}]({item['link']})\n\n{summary}\n\n"
+            # Extract just the summary text
+            summary_text = summary.get('summary', summary) if isinstance(summary, dict) else summary
+            summaries.append(summary_text)
+            markdown_content += f"### [{item['title']}]({item['link']})\n\n{summary_text}\n\n"
             progress = (i + 1) / total
-            yield f"data: {json.dumps({'progress': progress, 'summary': summary, 'index': i+1})}\n\n"
+            
+            # Send only the summary text to the front end
+            yield f"data: {json.dumps({'progress': progress, 'summary': summary_text, 'index': i+1})}\n\n"
 
         overall_summary = generate_overall_summary(summaries, search_query)
-        markdown_content = f"## Overall Summary\n\n{overall_summary}\n\n" + markdown_content
+        
+        # Extract just the overall summary text
+        overall_summary_text = overall_summary.get('overall_summary', overall_summary) if isinstance(overall_summary, dict) else overall_summary
+        
+        markdown_content = f"## Overall Summary\n\n{overall_summary_text}\n\n" + markdown_content
         
         cache.set(token, (markdown_content, search_query, page_number), timeout=1800) 
 
-        yield f"data: {json.dumps({'progress': 1, 'overall_summary': overall_summary, 'token': token})}\n\n"
+        # Send only the overall summary text to the front end
+        yield f"data: {json.dumps({'progress': 1, 'overall_summary': overall_summary_text, 'token': token})}\n\n"
 
     return Response(generate(), content_type='text/event-stream')
 
