@@ -191,7 +191,12 @@ async function processSearchResults() {
             updateProgress(completedArticles / totalArticles);
             displayIndividualSummary(data.index - 1, data.summary);
           } else if (data.overall_summary) {
-            displayOverallSummary(data.overall_summary);
+            displayOverallSummary(
+              data.overall_summary, 
+              data.followup_questions, 
+              data.more_keywords,
+              data.mind_map
+            );
             if (data.token) {
               downloadToken = data.token;
               addDownloadButton();
@@ -202,14 +207,14 @@ async function processSearchResults() {
     }
   } catch (error) {
     console.error('Error:', error);
-  }
-
-  isSummarizationInProgress = false;
-  const staticIcon = document.getElementById('redPandaStatic');
-  const animatedIcon = document.getElementById('redPandaAnimated');
-  if (staticIcon && animatedIcon) {
-    staticIcon.style.display = 'block';
-    animatedIcon.style.display = 'none';
+  } finally {
+    isSummarizationInProgress = false;
+    const staticIcon = document.getElementById('redPandaStatic');
+    const animatedIcon = document.getElementById('redPandaAnimated');
+    if (staticIcon && animatedIcon) {
+      staticIcon.style.display = 'block';
+      animatedIcon.style.display = 'none';
+    }
   }
 }
 
@@ -252,7 +257,7 @@ function displayIndividualSummary(index, summary) {
   }
 }
 
-function displayOverallSummary(summary) {
+function displayOverallSummary(summary, followupQuestions, moreKeywords, mindMap) {
   let overallSummaryDiv = document.getElementById('gs-summarizer-overall');
   if (!overallSummaryDiv) {
     overallSummaryDiv = document.createElement('div');
@@ -266,6 +271,7 @@ function displayOverallSummary(summary) {
       font-family: Arial, sans-serif;
       box-sizing: border-box;
       width: 100%;
+      position: relative;
     `;
     const resultsDiv = document.getElementById('gs_res_ccl');
     if (resultsDiv) {
@@ -273,12 +279,76 @@ function displayOverallSummary(summary) {
     }
   }
   
-  overallSummaryDiv.innerHTML = `
-    <h2 style="color: #4285F4; margin-top: 0;">Overall Summary</h2>
-    ${renderBoldText(summary.replace(/\n\n/g, '<br><br>'))}
+  let content = `
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+      <h2 style="color: #4285F4; margin: 0; font-size: 18px;">Overall Summary</h2>
+      <button id="foldButton" style="background: none; border: none; cursor: pointer; font-size: 20px;">▼</button>
+    </div>
+    <div id="summaryContent">
+      <p style="font-size: 14px; line-height: 1.4;">${renderBoldText(summary.replace(/\n\n/g, '<br><br>'))}</p>
   `;
 
+  if (mindMap && mindMap.central_topic) {
+    content += `
+      <h3 style="color: #4285F4; margin-top: 15px; font-size: 16px;">Mind Map</h3>
+      <div class="mind-map" style="margin-top: 10px; font-size: 14px;">
+        <ul style="list-style-type: none; padding-left: 0;">
+          <li>
+            <span style="font-weight: bold;">${mindMap.central_topic}</span>
+            <ul style="list-style-type: none; padding-left: 20px;">
+              ${mindMap.branches.map(branch => `
+                <li>
+                  <span style="font-weight: bold;">${branch.topic}</span>
+                  <ul style="list-style-type: disc; padding-left: 20px;">
+                    ${branch.details.map(detail => `<li>${detail}</li>`).join('')}
+                  </ul>
+                </li>
+              `).join('')}
+            </ul>
+          </li>
+        </ul>
+      </div>
+    `;
+  }
+
+  if (followupQuestions && followupQuestions.length > 0) {
+    content += `
+      <h3 style="color: #4285F4; margin-top: 15px; font-size: 16px;">Follow-up Questions</h3>
+      <ul style="list-style-type: disc; padding-left: 20px; margin-top: 5px;">
+        ${followupQuestions.map(q => `<li style="font-size: 14px; margin-bottom: 5px;">${q}</li>`).join('')}
+      </ul>
+    `;
+  }
+
+  if (moreKeywords && moreKeywords.length > 0) {
+    content += `
+      <h3 style="color: #4285F4; margin-top: 15px; font-size: 16px;">More Keywords</h3>
+      <p style="font-size: 14px; margin-top: 5px;">${moreKeywords.join(', ')}</p>
+    `;
+  }
+
+  content += `</div>`; // Close summaryContent div
+
+  overallSummaryDiv.innerHTML = content;
+
   addDownloadButton();
+
+  // Add fold/unfold functionality
+  const foldButton = document.getElementById('foldButton');
+  const summaryContent = document.getElementById('summaryContent');
+  let isFolded = false;
+
+  foldButton.addEventListener('click', () => {
+    if (isFolded) {
+      summaryContent.style.display = 'block';
+      foldButton.textContent = '▼';
+      isFolded = false;
+    } else {
+      summaryContent.style.display = 'none';
+      foldButton.textContent = '▶';
+      isFolded = true;
+    }
+  });
 }
 
 function addDownloadButton() {

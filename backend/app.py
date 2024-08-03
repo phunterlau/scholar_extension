@@ -83,26 +83,52 @@ def summarize():
                 summary = generate_summary(raw_content)
                 save_to_cache(item['link'], raw_content, summary)
             
-            # Extract just the summary text
             summary_text = summary.get('summary', summary) if isinstance(summary, dict) else summary
             summaries.append(summary_text)
             markdown_content += f"### [{item['title']}]({item['link']})\n\n{summary_text}\n\n"
             progress = (i + 1) / total
             
-            # Send only the summary text to the front end
             yield f"data: {json.dumps({'progress': progress, 'summary': summary_text, 'index': i+1})}\n\n"
 
         overall_summary = generate_overall_summary(summaries, search_query)
         
-        # Extract just the overall summary text
-        overall_summary_text = overall_summary.get('overall_summary', overall_summary) if isinstance(overall_summary, dict) else overall_summary
+        overall_summary_text = overall_summary.get('overall_summary', '')
+        followup_questions = overall_summary.get('followup_questions', [])
+        more_keywords = overall_summary.get('more_keywords', [])
+        mind_map = overall_summary.get('mind_map', {})
         
         markdown_content = f"## Overall Summary\n\n{overall_summary_text}\n\n" + markdown_content
         
-        cache.set(token, (markdown_content, search_query, page_number), timeout=1800) 
+        if followup_questions:
+            markdown_content += "## Follow-up Questions\n\n"
+            for question in followup_questions:
+                markdown_content += f"- {question}\n"
+            markdown_content += "\n"
+        
+        if more_keywords:
+            markdown_content += "## More Keywords\n\n"
+            markdown_content += ", ".join(more_keywords) + "\n\n"
+        
+        if mind_map:
+            markdown_content += "## Mind Map\n\n"
+            markdown_content += f"Central Topic: {mind_map.get('central_topic', '')}\n\n"
+            for branch in mind_map.get('branches', []):
+                markdown_content += f"- {branch.get('topic', '')}\n"
+                for detail in branch.get('details', []):
+                    markdown_content += f"  - {detail}\n"
+            markdown_content += "\n"
+        
+        cache.set(token, (markdown_content, search_query, page_number), timeout=1800)
 
-        # Send only the overall summary text to the front end
-        yield f"data: {json.dumps({'progress': 1, 'overall_summary': overall_summary_text, 'token': token})}\n\n"
+        final_data = {
+            'progress': 1, 
+            'overall_summary': overall_summary_text, 
+            'followup_questions': followup_questions,
+            'more_keywords': more_keywords,
+            'mind_map': mind_map,
+            'token': token
+        }
+        yield f"data: {json.dumps(final_data)}\n\n"
 
     return Response(generate(), content_type='text/event-stream')
 
