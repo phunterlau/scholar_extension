@@ -5,7 +5,7 @@ High voltage warning: it is mostly for my personal use, never promised stability
 
 Change logs:
 
-* Aug 2: added link cache expiration
+* Aug 2: added link cache expiration; started JSON mode
 * Aug 1: added token auth, refactorized backend.
 * July 31 afternoon: added long term cache for search results; added "Download Summary" function to export to Markdown; Add red panda animation next to the search button to start summary.
 * July 31: update UI with a small blue line for progress bar under the search box; add red panda logo and user click the extension button to run summarization; add rate limiting to the backend.
