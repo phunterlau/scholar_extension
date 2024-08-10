@@ -35,10 +35,24 @@ def get_raw_content(input_url):
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
     response = requests.get(url, headers=headers)
     
+    if response.status_code != 200:
+        return "Error loading text"
     return response.text
 
 def generate_summary(content):
     use_json_mode = config_dict['endpoint'] == "openai"
+    
+    if content == "Error loading text":
+        if use_json_mode:
+            return {
+                "summary": "Error loading text",
+                "mind_map": {
+                    "central_topic": "Error",
+                    "branches": []
+                }
+            }
+        else:
+            return {"summary": "Error loading text", "mind_map": {}}
     
     if use_json_mode:
         messages = [
@@ -66,7 +80,10 @@ def generate_summary(content):
 def generate_overall_summary(summaries, search_query):
     use_json_mode = config_dict['endpoint'] == "openai"
     
-    combined_summaries = "\n\n".join(summaries)
+    # Filter out error summaries
+    valid_summaries = [s for s in summaries if s != "Error loading text"]
+    combined_summaries = "\n\n".join(valid_summaries)
+    
     if use_json_mode:
         messages = [
             {"role": "system", "content": prompts['overall_summary']['system_json']},

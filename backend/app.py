@@ -22,7 +22,6 @@ app = Flask(__name__)
 app.secret_key = JWT_SECRET
 CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
-#limiter = Limiter(get_remote_address, app=app, default_limits=["1 per 30 seconds"], storage_uri="memory://")
 limiter = Limiter(
     get_remote_address,
     app=app,
@@ -81,11 +80,16 @@ def summarize():
             else:
                 raw_content = get_raw_content(item['link'])
                 summary = generate_summary(raw_content)
-                save_to_cache(item['link'], raw_content, summary)
+                if raw_content != "Error loading text" and summary.get('summary') != "Error loading text":
+                    save_to_cache(item['link'], raw_content, summary)
             
             summary_text = summary.get('summary', summary) if isinstance(summary, dict) else summary
-            summaries.append(summary_text)
-            markdown_content += f"### [{item['title']}]({item['link']})\n\n{summary_text}\n\n"
+            if summary_text != "Error loading text":
+                summaries.append(summary_text)
+                markdown_content += f"### [{item['title']}]({item['link']})\n\n{summary_text}\n\n"
+            else:
+                markdown_content += f"### [{item['title']}]({item['link']})\n\nError: Unable to load content for this link.\n\n"
+            
             progress = (i + 1) / total
             
             yield f"data: {json.dumps({'progress': progress, 'summary': summary_text, 'index': i+1})}\n\n"

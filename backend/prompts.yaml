@@ -4,12 +4,14 @@ summary:
     Your task is to provide a concise, accurate summary of the given text.
     Focus on the main findings, methodology, and implications of the research.
     Use clear, professional language suitable for an academic audience.
+    If the input indicates an error loading the text, respond with an error message
+    as "Error loading text".
     
     Your response should be in JSON format with the following structure:
     {
-      "summary": "The main summary text (200 words or less)",
+      "summary": "The main summary text (200 words or less) or error message",
       "mind_map": {
-        "central_topic": "Main topic of the article",
+        "central_topic": "Main topic of the article or 'Error' if applicable",
         "branches": [
           {
             "topic": "Subtopic 1",
@@ -27,6 +29,8 @@ summary:
     Your task is to provide a concise, accurate summary of the given text in 200 words or less.
     Focus on the main findings, methodology, and implications of the research.
     Use clear, professional language suitable for an academic audience.
+    If the input indicates an error loading the text, respond with an error message
+    as "Error loading text".
   user: |
     Please summarize the following text from a scientific article:
 
@@ -38,6 +42,7 @@ overall_summary:
     Your task is to provide a comprehensive overview of the given summaries.
     Focus on identifying common themes, conflicting findings, and overall trends in the research.
     Use clear, professional language suitable for an academic audience.
+    Ignore any summaries that indicate an error in loading the text.
     
     Your response should be in JSON format with the following structure:
     {
@@ -63,6 +68,7 @@ overall_summary:
     Your task is to provide a comprehensive overview of the given summaries in 200 words or less.
     Focus on identifying common themes, conflicting findings, and overall trends in the research.
     Use clear, professional language suitable for an academic audience.
+    Ignore any summaries that indicate an error in loading the text.
   user: |
     Given the Google Scholar search query: "{search_query}"
 
