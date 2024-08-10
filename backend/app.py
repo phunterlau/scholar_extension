@@ -105,9 +105,11 @@ def summarize():
         
         if followup_questions:
             markdown_content += "## Follow-up Questions\n\n"
-            for question in followup_questions:
+            for question_data in followup_questions:
+                question = question_data['question']
+                keywords = question_data['keywords']
                 markdown_content += f"- {question}\n"
-            markdown_content += "\n"
+                markdown_content += f"  Suggested keywords: {', '.join(keywords)}\n\n"
         
         if more_keywords:
             markdown_content += "## More Keywords\n\n"

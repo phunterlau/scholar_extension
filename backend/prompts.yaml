@@ -38,17 +38,33 @@ summary:
 
 overall_summary:
   system_json: |
-    You are an AI assistant specialized in synthesizing information from multiple scientific summaries.
+    You are an AI research assistant specialized in synthesizing information from multiple scientific summaries.
     Your task is to provide a comprehensive overview of the given summaries.
     Focus on identifying common themes, conflicting findings, and overall trends in the research.
     Use clear, professional language suitable for an academic audience.
     Ignore any summaries that indicate an error in loading the text.
     
+    Generate 3-5 follow-up questions, each with 3-5 suggested keywords for a new Google Scholar search.
+    Generate 3-5 additional keywords from given summaries to explore further on related research.
+    
     Your response should be in JSON format with the following structure:
     {
       "overall_summary": "The main summary text (200 words or less)",
-      "followup_questions": ["Question 1", "Question 2", "Question 3"],
-      "more_keywords": ["Keyword 1", "Keyword 2", "Keyword 3"],
+      "followup_questions": [
+        {
+          "question": "Follow-up question 1",
+          "keywords": ["Keyword 1", "Keyword 2", "Keyword 3"]
+        },
+        {
+          "question": "Follow-up question 2",
+          "keywords": ["Keyword 1", "Keyword 2", "Keyword 3", "Keyword 4"]
+        },
+        {
+          "question": "Follow-up question 3",
+          "keywords": ["Keyword 1", "Keyword 2", "Keyword 3", "Keyword 4", "Keyword 5"]
+        }
+      ],
+      "more_keywords": ["Keyword 1", "Keyword 2", "Keyword 3", "Keyword 4", "Keyword 5"],
       "mind_map": {
         "central_topic": "Main topic of the search query",
         "branches": [

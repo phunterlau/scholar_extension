@@ -280,12 +280,23 @@ function displayOverallSummary(summary, followupQuestions, moreKeywords, mindMap
   }
   
   let content = `
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+    <div id="summaryHeader" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
       <h2 style="color: #4285F4; margin: 0; font-size: 18px;">Overall Summary</h2>
-      <button id="foldButton" style="background: none; border: none; cursor: pointer; font-size: 20px;">▼</button>
+      <button id="foldButton" style="
+        background-color: #4285F4;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 5px 10px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background-color 0.3s;
+      ">Fold</button>
     </div>
-    <div id="summaryContent">
+    <div id="summaryMainContent">
       <p style="font-size: 14px; line-height: 1.4;">${renderBoldText(summary.replace(/\n\n/g, '<br><br>'))}</p>
+    </div>
+    <div id="summaryAdditionalContent" style="transition: max-height 0.5s ease-out; overflow: hidden;">
   `;
 
   if (mindMap && mindMap.central_topic) {
@@ -315,7 +326,14 @@ function displayOverallSummary(summary, followupQuestions, moreKeywords, mindMap
     content += `
       <h3 style="color: #4285F4; margin-top: 15px; font-size: 16px;">Follow-up Questions</h3>
       <ul style="list-style-type: disc; padding-left: 20px; margin-top: 5px;">
-        ${followupQuestions.map(q => `<li style="font-size: 14px; margin-bottom: 5px;">${q}</li>`).join('')}
+        ${followupQuestions.map(q => `
+          <li style="font-size: 14px; margin-bottom: 10px;">
+            ${q.question}
+            <div style="margin-top: 5px; font-size: 12px; color: #666;">
+              Suggested keywords: ${q.keywords.join(', ')}
+            </div>
+          </li>
+        `).join('')}
       </ul>
     `;
   }
@@ -327,7 +345,7 @@ function displayOverallSummary(summary, followupQuestions, moreKeywords, mindMap
     `;
   }
 
-  content += `</div>`; // Close summaryContent div
+  content += `</div>`; // Close summaryAdditionalContent div
 
   overallSummaryDiv.innerHTML = content;
 
@@ -335,20 +353,34 @@ function displayOverallSummary(summary, followupQuestions, moreKeywords, mindMap
 
   // Add fold/unfold functionality
   const foldButton = document.getElementById('foldButton');
-  const summaryContent = document.getElementById('summaryContent');
+  const summaryAdditionalContent = document.getElementById('summaryAdditionalContent');
   let isFolded = false;
 
-  foldButton.addEventListener('click', () => {
+  function toggleFold() {
     if (isFolded) {
-      summaryContent.style.display = 'block';
-      foldButton.textContent = '▼';
+      summaryAdditionalContent.style.maxHeight = summaryAdditionalContent.scrollHeight + "px";
+      foldButton.textContent = 'Fold';
       isFolded = false;
     } else {
-      summaryContent.style.display = 'none';
-      foldButton.textContent = '▶';
+      summaryAdditionalContent.style.maxHeight = '0';
+      foldButton.textContent = 'Unfold';
       isFolded = true;
     }
+  }
+
+  foldButton.addEventListener('click', toggleFold);
+  
+  // Hover effect for the button
+  foldButton.addEventListener('mouseover', () => {
+    foldButton.style.backgroundColor = '#3367D6';
   });
+  foldButton.addEventListener('mouseout', () => {
+    foldButton.style.backgroundColor = '#4285F4';
+  });
+
+  // Initially show everything (unfolded by default)
+  summaryAdditionalContent.style.maxHeight = summaryAdditionalContent.scrollHeight + "px";
+  foldButton.textContent = 'Fold';
 }
 
 function addDownloadButton() {
