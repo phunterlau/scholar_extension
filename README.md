@@ -5,6 +5,7 @@ High voltage warning: it is mostly for my personal use, never promised stability
 
 Change logs:
 
+* Aug 10: added token display; added keywords per suggested questions; added concept highlights for further search and obsidian markdown support of knowledge graph; added more error handing from non-crawl content; refinded overall display box style for fold and unfold.
 * Aug 2: added link cache expiration; started JSON mode for mindmap, followup research questions, suggsted search keywords
 * Aug 1: added token auth, refactorized backend.
 * July 31 afternoon: added long term cache for search results; added "Download Summary" function to export to Markdown; Add red panda animation next to the search button to start summary.
