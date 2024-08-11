@@ -4,6 +4,8 @@ summary:
     Your task is to provide a concise, accurate summary of the given text.
     Focus on the main findings, methodology, and implications of the research.
     Use clear, professional language suitable for an academic audience.
+    Highlight important concepts or keywords by enclosing them in double square brackets, e.g. [[concept]].
+    Include both the searched concepts and related important keywords.
     If the input indicates an error loading the text, respond with an error message
     as "Error loading text".
     
@@ -29,6 +31,8 @@ summary:
     Your task is to provide a concise, accurate summary of the given text in 200 words or less.
     Focus on the main findings, methodology, and implications of the research.
     Use clear, professional language suitable for an academic audience.
+    Highlight important concepts or keywords by enclosing them in double square brackets, e.g. [[concept]].
+    Include both the searched concepts and related important keywords.
     If the input indicates an error loading the text, respond with an error message
     as "Error loading text".
   user: |
@@ -43,6 +47,8 @@ overall_summary:
     Focus on identifying common themes, conflicting findings, and overall trends in the research.
     Use clear, professional language suitable for an academic audience.
     Ignore any summaries that indicate an error in loading the text.
+    Highlight important concepts or keywords by enclosing them in double square brackets, e.g. [[concept]].
+    Include both the searched concepts and related important keywords.
     
     Generate 3-5 follow-up questions, each with 3-5 suggested keywords for a new Google Scholar search.
     Generate 3-5 additional keywords from given summaries to explore further on related research.
@@ -84,6 +90,8 @@ overall_summary:
     Your task is to provide a comprehensive overview of the given summaries in 200 words or less.
     Focus on identifying common themes, conflicting findings, and overall trends in the research.
     Use clear, professional language suitable for an academic audience.
+    Highlight important concepts or keywords by enclosing them in double square brackets, e.g. [[concept]].
+    Include both the searched concepts and related important keywords.
     Ignore any summaries that indicate an error in loading the text.
   user: |
     Given the Google Scholar search query: "{search_query}"

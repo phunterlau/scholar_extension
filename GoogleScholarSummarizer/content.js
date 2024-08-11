@@ -236,6 +236,13 @@ function renderBoldText(text) {
   return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 }
 
+function renderHighlightedConcepts(text) {
+  return text.replace(/\[\[(.*?)\]\]/g, (match, concept) => {
+    const encodedConcept = encodeURIComponent(concept);
+    return `<span class="highlighted-concept" onclick="window.open('https://scholar.google.com/scholar?q=${encodedConcept}', '_blank')">${concept}</span>`;
+  });
+}
+
 function displayIndividualSummary(index, summary) {
   const articles = document.querySelectorAll('.gs_r.gs_or.gs_scl');
   if (articles[index]) {
@@ -253,7 +260,7 @@ function displayIndividualSummary(index, summary) {
       `;
       articles[index].appendChild(summaryDiv);
     }
-    summaryDiv.innerHTML = renderBoldText(summary.replace(/\n\n/g, '<br><br>'));
+    summaryDiv.innerHTML = renderHighlightedConcepts(renderBoldText(summary.replace(/\n\n/g, '<br><br>')));
   }
 }
 
@@ -294,7 +301,7 @@ function displayOverallSummary(summary, followupQuestions, moreKeywords, mindMap
       ">Fold</button>
     </div>
     <div id="summaryMainContent">
-      <p style="font-size: 14px; line-height: 1.4;">${renderBoldText(summary.replace(/\n\n/g, '<br><br>'))}</p>
+      <p style="font-size: 14px; line-height: 1.4;">${renderHighlightedConcepts(renderBoldText(summary.replace(/\n\n/g, '<br><br>')))}</p>
     </div>
     <div id="summaryAdditionalContent" style="transition: max-height 0.5s ease-out; overflow: hidden;">
   `;
@@ -382,6 +389,19 @@ function displayOverallSummary(summary, followupQuestions, moreKeywords, mindMap
   summaryAdditionalContent.style.maxHeight = summaryAdditionalContent.scrollHeight + "px";
   foldButton.textContent = 'Fold';
 }
+
+const style = document.createElement('style');
+style.textContent = `
+  .highlighted-concept {
+    border-bottom: 1px dotted #4285F4;
+    cursor: pointer;
+    transition: background-color 0.3s;
+  }
+  .highlighted-concept:hover {
+    background-color: #E8F0FE;
+  }
+`;
+document.head.appendChild(style);
 
 function addDownloadButton() {
   let downloadButtonContainer = document.getElementById('gs-summarizer-download-container');

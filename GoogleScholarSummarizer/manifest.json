@@ -5,7 +5,8 @@
   "description": "Summarizes Google Scholar search results",
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "tabs"
   ],
   "host_permissions": [
     "https://scholar.google.com/*",
