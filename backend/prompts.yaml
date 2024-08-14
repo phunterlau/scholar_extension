@@ -60,7 +60,7 @@ overall_summary:
     
     Your response should be in JSON format with the following structure:
     {
-      "overall_summary": "The main summary text (200 words or less) with [[concept1]] [1] and [[concept2]][[concept3]][3][4]",
+      "overall_summary": "The main summary text (200 words or less)",
       "followup_questions": [
         {
           "question": "Follow-up question 1",
