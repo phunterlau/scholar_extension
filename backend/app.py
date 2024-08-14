@@ -69,7 +69,8 @@ def summarize():
     token = str(uuid.uuid4())
 
     def generate():
-        summaries = [""]
+        summaries = []
+        links = []
         total = len(contents)
         markdown_content = f"# Google Scholar Search Results Summary\n\n## Search Query: {search_query}\n\n## Page Number: {page_number}\n\n"
         
@@ -80,21 +81,17 @@ def summarize():
             else:
                 raw_content = get_raw_content(item['link'])
                 summary = generate_summary(raw_content)
-                if raw_content != "Error loading text" and summary.get('summary') != "Error loading text":
-                    save_to_cache(item['link'], raw_content, summary)
+                save_to_cache(item['link'], raw_content, summary)
             
             summary_text = summary.get('summary', summary) if isinstance(summary, dict) else summary
-            if summary_text != "Error loading text":
-                summaries.append(summary_text)
-                markdown_content += f"### [{item['title']}]({item['link']})\n\n{summary_text}\n\n"
-            else:
-                markdown_content += f"### [{item['title']}]({item['link']})\n\nError: Unable to load content for this link.\n\n"
-            
+            summaries.append(summary_text)
+            links.append(item['link'])
+            markdown_content += f"### [{item['title']}]({item['link']})\n\n{summary_text}\n\n"
             progress = (i + 1) / total
             
             yield f"data: {json.dumps({'progress': progress, 'summary': summary_text, 'index': i+1})}\n\n"
 
-        overall_summary = generate_overall_summary(summaries, search_query)
+        overall_summary = generate_overall_summary(summaries, search_query, links)
         
         overall_summary_text = overall_summary.get('overall_summary', '')
         followup_questions = overall_summary.get('followup_questions', [])
@@ -134,6 +131,7 @@ def summarize():
             'mind_map': mind_map,
             'token': token
         }
+        print(final_data['overall_summary'])
         yield f"data: {json.dumps(final_data)}\n\n"
 
     return Response(generate(), content_type='text/event-stream')

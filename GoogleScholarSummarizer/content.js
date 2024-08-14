@@ -144,11 +144,13 @@ async function processSearchResults() {
   updateProgress(0);
 
   const contents = [];
+  const links = [];
   for (let article of articles) {
     const link = article.querySelector('.gs_rt a')?.href;
     const title = article.querySelector('.gs_rt')?.textContent.trim();
     if (link && title) {
       contents.push({ link: link, title: title });
+      links.push(link);
     }
   }
 
@@ -186,16 +188,19 @@ async function processSearchResults() {
       for (const line of lines) {
         if (line.startsWith('data: ')) {
           const data = JSON.parse(line.slice(6));
+          console.log("Received data:", data);
           if (data.summary) {
             completedArticles++;
             updateProgress(completedArticles / totalArticles);
             displayIndividualSummary(data.index - 1, data.summary);
           } else if (data.overall_summary) {
+            console.log("Received overall summary");
             displayOverallSummary(
               data.overall_summary, 
               data.followup_questions, 
               data.more_keywords,
-              data.mind_map
+              data.mind_map,
+              links
             );
             if (data.token) {
               downloadToken = data.token;
@@ -243,6 +248,46 @@ function renderHighlightedConcepts(text) {
   });
 }
 
+function renderCitations(text, links) {
+  console.log("Rendering citations. Text:", text);
+  console.log("Links:", links);
+
+  if (typeof text !== 'string') {
+    console.error("Invalid text input for renderCitations. Expected string, got:", typeof text);
+    return text;
+  }
+
+  if (!Array.isArray(links)) {
+    console.error("Invalid links input for renderCitations. Expected array, got:", typeof links);
+    return text;
+  }
+
+  const citationRegex = /\[(\d{1,2})\]/g;
+  const hasCitations = citationRegex.test(text);
+
+  if (!hasCitations) {
+    console.log("No citation markers found in the text.");
+    return text;
+  }
+
+  const renderedText = text.replace(citationRegex, (match, number) => {
+    console.log("Citation match:", match);
+    const index = parseInt(number) - 1;
+    console.log(`Parsed index: ${index} from number: ${number}`);
+    
+    if (index >= 0 && index < links.length) {
+      const link = links[index];
+      console.log(`Creating link for index ${index}: ${link}`);
+      return `<a href="${link}" target="_blank">[${number}]</a>`;
+    }
+    console.warn(`Invalid index ${index} for citation. links.length: ${links.length}`);
+    return match;
+  });
+
+  console.log("Rendered text:", renderedText);
+  return renderedText;
+}
+
 function displayIndividualSummary(index, summary) {
   const articles = document.querySelectorAll('.gs_r.gs_or.gs_scl');
   if (articles[index]) {
@@ -264,7 +309,11 @@ function displayIndividualSummary(index, summary) {
   }
 }
 
-function displayOverallSummary(summary, followupQuestions, moreKeywords, mindMap) {
+function displayOverallSummary(summary, followupQuestions, moreKeywords, mindMap, links) {
+  console.log("Displaying overall summary");
+  console.log("Summary:", summary);
+  console.log("Links:", links);
+
   let overallSummaryDiv = document.getElementById('gs-summarizer-overall');
   if (!overallSummaryDiv) {
     overallSummaryDiv = document.createElement('div');
@@ -286,6 +335,15 @@ function displayOverallSummary(summary, followupQuestions, moreKeywords, mindMap
     }
   }
   
+  const boldText = renderBoldText(summary);
+  console.log("After bold rendering:", boldText);
+  
+  const highlightedText = renderHighlightedConcepts(boldText);
+  console.log("After concept highlighting:", highlightedText);
+  
+  const processedSummary = renderCitations(highlightedText, links);
+  console.log("After citation rendering:", processedSummary);
+
   let content = `
     <div id="summaryHeader" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
       <h2 style="color: #4285F4; margin: 0; font-size: 18px;">Overall Summary</h2>
@@ -301,7 +359,7 @@ function displayOverallSummary(summary, followupQuestions, moreKeywords, mindMap
       ">Fold</button>
     </div>
     <div id="summaryMainContent">
-      <p style="font-size: 14px; line-height: 1.4;">${renderHighlightedConcepts(renderBoldText(summary.replace(/\n\n/g, '<br><br>')))}</p>
+      <p style="font-size: 14px; line-height: 1.4;">${processedSummary.replace(/\n\n/g, '<br><br>')}</p>
     </div>
     <div id="summaryAdditionalContent" style="transition: max-height 0.5s ease-out; overflow: hidden;">
   `;
@@ -355,6 +413,7 @@ function displayOverallSummary(summary, followupQuestions, moreKeywords, mindMap
   content += `</div>`; // Close summaryAdditionalContent div
 
   overallSummaryDiv.innerHTML = content;
+  console.log("Overall summary content set");
 
   addDownloadButton();
 

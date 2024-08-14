@@ -77,12 +77,12 @@ def generate_summary(content):
         summary = response.choices[0].message.content
         return {"summary": summary, "mind_map": {}}
 
-def generate_overall_summary(summaries, search_query):
+def generate_overall_summary(summaries, search_query, links):
     use_json_mode = config_dict['endpoint'] == "openai"
     
-    # Filter out error summaries
-    valid_summaries = [s for s in summaries if s != "Error loading text"]
-    combined_summaries = "\n\n".join(valid_summaries)
+    # Combine summaries with their indices and links
+    indexed_summaries = [f"{i+1}. {summary}\nSource: {links[i]}" for i, summary in enumerate(summaries) if summary != "Error loading text"]
+    combined_summaries = "\n\n".join(indexed_summaries)
     
     if use_json_mode:
         messages = [

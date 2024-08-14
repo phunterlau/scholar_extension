@@ -49,13 +49,18 @@ overall_summary:
     Ignore any summaries that indicate an error in loading the text.
     Highlight important concepts or keywords by enclosing them in double square brackets, e.g. [[concept]].
     Include both the searched concepts and related important keywords.
+
+    For each concept, please cite the the relevant source(s) of summaries with square brackets with digits, e.g. [1] or [2].
+    If a concept includes multiple sources of citations, please list all applicable citations, e.g. [1][2][3], but do not use commas or spaces between citations.
+    Citations can range from [1] to [99].
+    The index of each source is provided along with its summary.
     
     Generate 3-5 follow-up questions, each with 3-5 suggested keywords for a new Google Scholar search.
     Generate 3-5 additional keywords from given summaries to explore further on related research.
     
     Your response should be in JSON format with the following structure:
     {
-      "overall_summary": "The main summary text (200 words or less)",
+      "overall_summary": "The main summary text (200 words or less) with [[concept1]] [1] and [[concept2]][[concept3]][3][4]",
       "followup_questions": [
         {
           "question": "Follow-up question 1",
@@ -92,6 +97,11 @@ overall_summary:
     Use clear, professional language suitable for an academic audience.
     Highlight important concepts or keywords by enclosing them in double square brackets, e.g. [[concept]].
     Include both the searched concepts and related important keywords.
+
+    For each concept, please cite the the relevant source(s) of summaries with square brackets with digits, e.g. [1] or [2].
+    If a sentence includes multiple sources of citations, please list all applicable citations, e.g. [1][2][3], but do not use commas or spaces between citations.
+    Citations can range from [1] to [99].
+    The index of each source is provided along with its summary.
     Ignore any summaries that indicate an error in loading the text.
   user: |
     Given the Google Scholar search query: "{search_query}"
