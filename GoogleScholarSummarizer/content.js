@@ -80,7 +80,7 @@ function addRedPandaIcon() {
   return redPandaContainer;
 }
 
-function startSummarization() {
+async function startSummarization() {
   if (!isSummarizationInProgress) {
     const staticIcon = document.getElementById('redPandaStatic');
     const animatedIcon = document.getElementById('redPandaAnimated');
@@ -88,8 +88,60 @@ function startSummarization() {
       staticIcon.style.display = 'none';
       animatedIcon.style.display = 'block';
     }
-    processSearchResults();
+    
+    // Show loading message
+    displayLoadingMessage();
+    
+    await processSearchResults();
   }
+}
+
+function displayLoadingMessage() {
+  let overallSummaryDiv = document.getElementById('gs-summarizer-overall');
+  if (!overallSummaryDiv) {
+    overallSummaryDiv = document.createElement('div');
+    overallSummaryDiv.id = 'gs-summarizer-overall';
+    overallSummaryDiv.style.cssText = `
+      border: 2px solid #4285F4;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 15px 0;
+      background-color: #F8F9FA;
+      font-family: Arial, sans-serif;
+      box-sizing: border-box;
+      width: 100%;
+      position: relative;
+    `;
+    const resultsDiv = document.getElementById('gs_res_ccl');
+    if (resultsDiv) {
+      resultsDiv.insertBefore(overallSummaryDiv, resultsDiv.firstChild);
+    }
+  }
+
+  overallSummaryDiv.innerHTML = `
+    <div style="display: flex; align-items: center; justify-content: center; flex-direction: column;">
+      <div class="loading-spinner"></div>
+      <p style="margin-top: 10px; font-size: 16px; color: #4285F4;">Collecting article content, please wait...</p>
+    </div>
+  `;
+
+  // Add CSS for loading spinner
+  const style = document.createElement('style');
+  style.textContent = `
+    .loading-spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #4285F4;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  `;
+  document.head.appendChild(style);
 }
 
 function addProgressBar() {
@@ -212,6 +264,8 @@ async function processSearchResults() {
     }
   } catch (error) {
     console.error('Error:', error);
+    // Display error message in the summary div
+    displayErrorMessage("An error occurred while summarizing. Please try again.");
   } finally {
     isSummarizationInProgress = false;
     const staticIcon = document.getElementById('redPandaStatic');
@@ -220,6 +274,17 @@ async function processSearchResults() {
       staticIcon.style.display = 'block';
       animatedIcon.style.display = 'none';
     }
+  }
+}
+
+function displayErrorMessage(message) {
+  let overallSummaryDiv = document.getElementById('gs-summarizer-overall');
+  if (overallSummaryDiv) {
+    overallSummaryDiv.innerHTML = `
+      <div style="color: #D32F2F; font-size: 16px; text-align: center;">
+        <p>${message}</p>
+      </div>
+    `;
   }
 }
 
